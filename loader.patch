@@ -1,5 +1,5 @@
 diff --git a/backend/loader.py b/backend/loader.py
-index e824f6b..db62079 100644
+index e824f6b..1b9e408 100644
 --- a/backend/loader.py
 +++ b/backend/loader.py
 @@ -22,6 +22,7 @@ from backend.diffusion_engine.sd20 import StableDiffusion2
@@ -29,18 +29,46 @@ index e824f6b..db62079 100644
              elif cls_name == 'SD3Transformer2DModel':
                  from backend.nn.mmditx import MMDiTX
                  model_loader = lambda c: MMDiTX(**c)
-@@ -486,6 +490,10 @@ def forge_loader(sd, additional_state_dicts=None):
+@@ -151,7 +155,6 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
+                 initial_device = memory_management.unet_inital_load_device(parameters=state_dict_parameters, dtype=storage_dtype)
+                 need_manual_cast = storage_dtype != computation_dtype
+                 to_args = dict(device=initial_device, dtype=storage_dtype)
+-
+                 with using_forge_operations(**to_args, manual_cast_enabled=need_manual_cast):
+                     model = model_loader(unet_config).to(**to_args)
+ 
+@@ -478,6 +481,14 @@ def split_state_dict(sd, additional_state_dicts: list = None):
+ 
+     return state_dict, guess
+ 
++class GuessChroma:
++    huggingface_repo = 'Chroma'
++    unet_extra_config = {
++        'guidance_out_dim': 3072,
++        'guidance_hidden_dim': 5120,
++        'guidance_n_layers': 5
++    }
++    unet_remove_config = ['guidance_embed']
+ 
+ @torch.inference_mode()
+ def forge_loader(sd, additional_state_dicts=None):
+@@ -486,6 +497,15 @@ def forge_loader(sd, additional_state_dicts=None):
      except:
          raise ValueError('Failed to recognize model type!')
      
 +    if estimated_config.huggingface_repo == "black-forest-labs/FLUX.1-schnell"  \
 +        and "transformer" in state_dicts \
 +        and "distilled_guidance_layer.layers.0.in_layer.bias" in state_dicts["transformer"]:
-+        estimated_config.huggingface_repo = "Chroma"
++        estimated_config.huggingface_repo = GuessChroma.huggingface_repo
++        for x in GuessChroma.unet_extra_config:
++            estimated_config.unet_config[x] = GuessChroma.unet_extra_config[x]
++        for x in GuessChroma.unet_remove_config:
++            del estimated_config.unet_config[x]
++
      repo_name = estimated_config.huggingface_repo
  
      local_path = os.path.join(dir_path, 'huggingface', repo_name)
-@@ -540,6 +548,10 @@ def forge_loader(sd, additional_state_dicts=None):
+@@ -540,6 +560,10 @@ def forge_loader(sd, additional_state_dicts=None):
          else:
              huggingface_components['scheduler'].config.prediction_type = prediction_types.get(estimated_config.model_type.name, huggingface_components['scheduler'].config.prediction_type)
  

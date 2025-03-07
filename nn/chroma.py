@@ -308,10 +308,9 @@ class LastLayer(nn.Module):
 
 
 class IntegratedChromaTransformer2DModel(nn.Module):
-    def __init__(self, in_channels: int, vec_in_dim: int, context_in_dim: int, hidden_size: int, mlp_ratio: float, num_heads: int, depth: int, depth_single_blocks: int, axes_dim: list[int], theta: int, qkv_bias: bool, guidance_embed: bool):
+    def __init__(self, in_channels: int, vec_in_dim: int, context_in_dim: int, hidden_size: int, mlp_ratio: float, num_heads: int, depth: int, depth_single_blocks: int, axes_dim: list[int], theta: int, qkv_bias: bool, guidance_out_dim: int, guidance_hidden_dim: int, guidance_n_layers: int):
         super().__init__()
 
-        self.guidance_embed = guidance_embed
         self.in_channels = in_channels * 4
         self.out_channels = self.in_channels
 
@@ -327,8 +326,7 @@ class IntegratedChromaTransformer2DModel(nn.Module):
 
         self.pe_embedder = EmbedND(dim=pe_dim, theta=theta, axes_dim=axes_dim)
         self.img_in = nn.Linear(self.in_channels, self.hidden_size, bias=True)
-        self.distilled_guidance_layer = Approximator(64, 3072, 5120, 5)
-        self.guidance_in = MLPEmbedder(in_dim=256, hidden_dim=self.hidden_size) if guidance_embed else nn.Identity()
+        self.distilled_guidance_layer = Approximator(64, guidance_out_dim, guidance_hidden_dim, guidance_n_layers)
         self.txt_in = nn.Linear(context_in_dim, self.hidden_size)
 
         self.double_blocks = nn.ModuleList(
@@ -423,15 +421,18 @@ class IntegratedChromaTransformer2DModel(nn.Module):
         img = self.img_in(img)
         device = img.device
         dtype = img.dtype
-        mod_index_length = 344
+        nb_double_block = len(self.double_blocks)
+        nb_single_block = len(self.single_blocks)
+        
+        mod_index_length = nb_double_block*12 + nb_single_block*3 + 2
         distill_timestep = timestep_embedding(timesteps.detach().clone(), 16).to(device=device, dtype=dtype)
         distil_guidance = timestep_embedding(guidance.detach().clone(), 16).to(device=device, dtype=dtype)
         modulation_index = timestep_embedding(torch.arange(mod_index_length), 32).to(device=device, dtype=dtype)
-        modulation_index = modulation_index.unsqueeze(0).repeat(img.shape[0], 1, 1).to(device=device, dtype=dtype)
-        timestep_guidance = torch.cat([distill_timestep, distil_guidance], dim=1).unsqueeze(1).repeat(1, mod_index_length, 1).to(device=device, dtype=dtype)
-        input_vec = torch.cat([timestep_guidance, modulation_index], dim=-1).to(device=device, dtype=dtype)
+        modulation_index = modulation_index.unsqueeze(0).repeat(img.shape[0], 1, 1)
+        timestep_guidance = torch.cat([distill_timestep, distil_guidance], dim=1).unsqueeze(1).repeat(1, mod_index_length, 1)
+        input_vec = torch.cat([timestep_guidance, modulation_index], dim=-1)
         mod_vectors = self.distilled_guidance_layer(input_vec)
-        mod_vectors_dict = self.distribute_modulations(mod_vectors, 38, 19)
+        mod_vectors_dict = self.distribute_modulations(mod_vectors, nb_single_block, nb_double_block)
         
         txt = self.txt_in(txt)
         del y, guidance
