@@ -6,7 +6,6 @@ from backend.diffusion_engine.flux import Flux
 class Chroma(Flux):
     def __init__(self, estimated_config, huggingface_components):
         super().__init__(estimated_config, huggingface_components)
-        print("Chroma __init__")
 
     @torch.inference_mode()
     def get_learned_conditioning(self, prompt: list[str]):
