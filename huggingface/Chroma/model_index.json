@@ -7,17 +7,9 @@
   ],
   "text_encoder": [
     "transformers",
-    "CLIPTextModel"
-  ],
-  "text_encoder_2": [
-    "transformers",
     "T5EncoderModel"
   ],
   "tokenizer": [
-    "transformers",
-    "CLIPTokenizer"
-  ],
-  "tokenizer_2": [
     "transformers",
     "T5TokenizerFast"
   ],

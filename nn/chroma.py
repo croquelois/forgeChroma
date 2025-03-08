@@ -415,7 +415,7 @@ class IntegratedChromaTransformer2DModel(nn.Module):
                 idx += 2  # Advance by 2 vectors
         return block_dict
         
-    def inner_forward(self, img, img_ids, txt, txt_ids, timesteps, y, guidance=None):
+    def inner_forward(self, img, img_ids, txt, txt_ids, timesteps, guidance=None):
         if img.ndim != 3 or txt.ndim != 3:
             raise ValueError("Input img and txt tensors must have 3 dimensions.")
         img = self.img_in(img)
@@ -435,7 +435,7 @@ class IntegratedChromaTransformer2DModel(nn.Module):
         mod_vectors_dict = self.distribute_modulations(mod_vectors, nb_single_block, nb_double_block)
         
         txt = self.txt_in(txt)
-        del y, guidance
+        del guidance
         ids = torch.cat((txt_ids, img_ids), dim=1)
         del txt_ids, img_ids
         pe = self.pe_embedder(ids)
@@ -455,7 +455,7 @@ class IntegratedChromaTransformer2DModel(nn.Module):
         img = self.final_layer(img, final_mod)
         return img
 
-    def forward(self, x, timestep, context, y, guidance=None, **kwargs):
+    def forward(self, x, timestep, context, guidance=None, **kwargs):
         bs, c, h, w = x.shape
         input_device = x.device
         input_dtype = x.dtype
@@ -473,7 +473,7 @@ class IntegratedChromaTransformer2DModel(nn.Module):
         img_ids = repeat(img_ids, "h w c -> b (h w) c", b=bs)
         txt_ids = torch.zeros((bs, context.shape[1], 3), device=input_device, dtype=input_dtype)
         del input_device, input_dtype
-        out = self.inner_forward(img, img_ids, context, txt_ids, timestep, y, guidance)
+        out = self.inner_forward(img, img_ids, context, txt_ids, timestep, guidance)
         del img, img_ids, txt_ids, timestep, context
         out = rearrange(out, "b (h w) (c ph pw) -> b c (h ph) (w pw)", h=h_len, w=w_len, ph=2, pw=2)[:, :, :h, :w]
         del h_len, w_len, bs
