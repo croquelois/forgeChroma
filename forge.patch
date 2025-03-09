@@ -81,3 +81,75 @@ index e824f6b..717d368 100644
      for M in possible_models:
          if any(isinstance(estimated_config, x) for x in M.matched_guesses):
              return M(estimated_config=estimated_config, huggingface_components=huggingface_components)
+diff --git a/backend/sampling/condition.py b/backend/sampling/condition.py
+index b594d1b..f9fab0e 100644
+--- a/backend/sampling/condition.py
++++ b/backend/sampling/condition.py
+@@ -102,17 +102,18 @@ def compile_conditions(cond):
+         return [result, ]
+ 
+     cross_attn = cond['crossattn']
+-    pooled_output = cond['vector']
+ 
+     result = dict(
+         cross_attn=cross_attn,
+-        pooled_output=pooled_output,
+         model_conds=dict(
+-            c_crossattn=ConditionCrossAttn(cross_attn),
+-            y=Condition(pooled_output)
++            c_crossattn=ConditionCrossAttn(cross_attn)
+         )
+     )
+ 
++    if 'vector' in cond:
++        result['pooled_output'] = cond['vector']
++        result['model_conds']['y'] = Condition(cond['vector'])
++
+     if 'guidance' in cond:
+         result['model_conds']['guidance'] = Condition(cond['guidance'])
+ 
+diff --git a/backend/text_processing/t5_engine.py b/backend/text_processing/t5_engine.py
+index e00cccc..b09ec98 100644
+--- a/backend/text_processing/t5_engine.py
++++ b/backend/text_processing/t5_engine.py
+@@ -17,7 +17,7 @@ class PromptChunk:
+ 
+ 
+ class T5TextProcessingEngine:
+-    def __init__(self, text_encoder, tokenizer, emphasis_name="Original", min_length=256):
++    def __init__(self, text_encoder, tokenizer, emphasis_name="Original", min_length=256, do_padding=True):
+         super().__init__()
+ 
+         self.text_encoder = text_encoder.transformer
+@@ -27,6 +27,7 @@ class T5TextProcessingEngine:
+         self.min_length = min_length
+         self.id_end = 1
+         self.id_pad = 0
++        self.do_padding = do_padding
+ 
+         vocab = self.tokenizer.get_vocab()
+ 
+@@ -86,8 +87,9 @@ class T5TextProcessingEngine:
+             remaining_count = self.min_length - current_chunk_length
+ 
+             if remaining_count > 0:
+-                chunk.tokens += [self.id_pad] * remaining_count
+-                chunk.multipliers += [1.0] * remaining_count
++                padding_length = remaining_count if self.do_padding else 0
++                chunk.tokens += [self.id_pad] * padding_length
++                chunk.multipliers += [1.0] * padding_length
+ 
+             chunks.append(chunk)
+             chunk = PromptChunk()
+@@ -124,8 +126,9 @@ class T5TextProcessingEngine:
+ 
+                 #   pad all chunks to length of longest chunk
+                 max_tokens = 0
+-                for chunk in chunks:
+-                    max_tokens = max (len(chunk.tokens), max_tokens)
++                if self.do_padding:
++                    for chunk in chunks:
++                        max_tokens = max (len(chunk.tokens), max_tokens)
+ 
+                 for chunk in chunks:
+                     tokens = chunk.tokens

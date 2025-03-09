@@ -4,11 +4,11 @@ Add Chroma architecture to Forge
 
 ## Installation
 
-1) inside your forge root directory, apply the patch to loader.py `git apply loader.patch`
-2) apply the patch to condition.py `git apply condition.patch`
-3) add `huggingface/Chroma` directory inside `backend/huggingface`
-4) add `diffusion_engine/chroma.py` file inside `backend/diffusion_engine`
-5) add `nn/chroma.py` file inside `backend/nn`
+0) you may want to force Forge to be in the same version than mine `git checkout c055f2d43b07cbfd87ac3da4899a6d7ee52ebab9`
+1) inside your forge root directory, apply the patch: `git apply forge.patch` it will modify `backend/loader.py`, `backend/condition.py` and `backend/text_processing/t5_engine.py`
+2) add `huggingface/Chroma` directory inside `backend/huggingface`
+3) add `diffusion_engine/chroma.py` file inside `backend/diffusion_engine`
+4) add `nn/chroma.py` file inside `backend/nn`
 
 ## Architecture
 
@@ -21,6 +21,8 @@ Chroma is quite similar to Flux-Schnell, but the guidance part has been removed:
 instead there is an independent multilayered network called `distilled_guidance_layer` which handle the same function without being deeply intertwined to the different layers
 
 another change is on the text encoder, Flux is relying on both CLIP_L and T5, but Chroma only need T5.
+
+last change, the original Flux model is padding the result of the T5 Tokenizer to force it to at least 256 token. Chroma is trained without the padding.
 
 ## Result
 
