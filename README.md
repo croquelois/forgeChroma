@@ -26,4 +26,10 @@ last change, the original Flux model is padding the result of the T5 Tokenizer t
 
 ## Result
 
+- in Forge, on the top left select `all` and not `flux`
+- use a resolution around 1024x1024
+- I'm using `Euler` sampler with `Simple` scheduler, be carreful some combination don't work at all
+- set the distilled config scale to 1, and the normal config scale to something like 3.5
+- use a negative prompt, example: `Low quality, deformed, out of focus, restricted palette, flat colors`
+
 ![sailor](sailor.png)
