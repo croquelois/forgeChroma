@@ -31,5 +31,8 @@ last change, the original Flux model is padding the result of the T5 Tokenizer t
 - I'm using `Euler` sampler with `Simple` scheduler, be carreful some combination don't work at all
 - set the distilled config scale to 1, and the normal config scale to something like 3.5
 - use a negative prompt, example: `Low quality, deformed, out of focus, restricted palette, flat colors`
+- forge doesn't seem to work with all quantized model, `Q4_K_S` fail, but `Q4_1` work
+- vae: `flux-vae-dev.safetensors`
+- text: `t5xxl_fp8_e4m3fn.safetensors`
 
 ![sailor](sailor.png)
