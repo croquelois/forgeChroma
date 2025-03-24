@@ -39,7 +39,7 @@ class Chroma(ForgeDiffusionEngine):
             text_encoder=clip.cond_stage_model.t5xxl,
             tokenizer=clip.tokenizer.t5xxl,
             emphasis_name=dynamic_args['emphasis_name'],
-            min_length=1
+            min_length=2
         )
 
         self.forge_objects = ForgeObjects(unet=unet, clip=clip, vae=vae, clipvision=None)
