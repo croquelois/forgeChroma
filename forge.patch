@@ -119,18 +119,6 @@ index 5200093..ed7a4dd 100644
                  if prefix + 'bias' in state_dict:
                      self.bias = torch.nn.Parameter(state_dict[prefix + 'bias'].to(self.dummy))
                  del self.dummy
-diff --git a/backend/operations_gguf.py b/backend/operations_gguf.py
-index f30ef7d..468e499 100644
---- a/backend/operations_gguf.py
-+++ b/backend/operations_gguf.py
-@@ -13,6 +13,7 @@ quants_mapping = {
-     gguf.GGMLQuantizationType.Q5_K: gguf.Q5_K,
-     gguf.GGMLQuantizationType.Q6_K: gguf.Q6_K,
-     gguf.GGMLQuantizationType.Q8_0: gguf.Q8_0,
-+    gguf.GGMLQuantizationType.BF16: gguf.BF16,
- }
- 
- 
 diff --git a/backend/sampling/condition.py b/backend/sampling/condition.py
 index b594d1b..f9fab0e 100644
 --- a/backend/sampling/condition.py
@@ -189,17 +177,3 @@ index e00cccc..e235c1f 100644
              current_chunk_length = len(chunk.tokens)
  
              token_count += current_chunk_length
-diff --git a/packages_3rdparty/gguf/quants.py b/packages_3rdparty/gguf/quants.py
-index abe52d5..cfd4d21 100644
---- a/packages_3rdparty/gguf/quants.py
-+++ b/packages_3rdparty/gguf/quants.py
-@@ -268,6 +268,9 @@ class BF16(__Quant, qtype=GGMLQuantizationType.BF16):
-     def dequantize_blocks(cls, blocks: np.ndarray) -> np.ndarray:
-         return (blocks.view(np.int16).astype(np.int32) << 16).view(np.float32)
- 
-+    @classmethod
-+    def dequantize_blocks_pytorch(cls, blocks, block_size, type_size, parameter) -> torch.Tensor:
-+        return (blocks.view(torch.int16).to(torch.int32) << 16).view(torch.float32)
- 
- class Q4_0(__Quant, qtype=GGMLQuantizationType.Q4_0):
-     @classmethod
