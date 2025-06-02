@@ -119,33 +119,6 @@ index 5200093..ed7a4dd 100644
                  if prefix + 'bias' in state_dict:
                      self.bias = torch.nn.Parameter(state_dict[prefix + 'bias'].to(self.dummy))
                  del self.dummy
-diff --git a/backend/sampling/condition.py b/backend/sampling/condition.py
-index b594d1b..f9fab0e 100644
---- a/backend/sampling/condition.py
-+++ b/backend/sampling/condition.py
-@@ -102,17 +102,18 @@ def compile_conditions(cond):
-         return [result, ]
- 
-     cross_attn = cond['crossattn']
--    pooled_output = cond['vector']
- 
-     result = dict(
-         cross_attn=cross_attn,
--        pooled_output=pooled_output,
-         model_conds=dict(
--            c_crossattn=ConditionCrossAttn(cross_attn),
--            y=Condition(pooled_output)
-+            c_crossattn=ConditionCrossAttn(cross_attn)
-         )
-     )
- 
-+    if 'vector' in cond:
-+        result['pooled_output'] = cond['vector']
-+        result['model_conds']['y'] = Condition(cond['vector'])
-+
-     if 'guidance' in cond:
-         result['model_conds']['guidance'] = Condition(cond['guidance'])
- 
 diff --git a/backend/text_processing/t5_engine.py b/backend/text_processing/t5_engine.py
 index e00cccc..e235c1f 100644
 --- a/backend/text_processing/t5_engine.py

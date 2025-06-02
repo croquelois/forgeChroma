@@ -53,10 +53,7 @@ class Chroma(ForgeDiffusionEngine):
     @torch.inference_mode()
     def get_learned_conditioning(self, prompt: list[str]):
         memory_management.load_model_gpu(self.forge_objects.clip.patcher)
-        cond_t5 = self.text_processing_engine_t5(prompt)
-        cond = dict(crossattn=cond_t5)
-        cond['guidance'] = torch.FloatTensor([0] * len(prompt))
-        return cond
+        return self.text_processing_engine_t5(prompt)
 
     @torch.inference_mode()
     def get_prompt_lengths_on_ui(self, prompt):
