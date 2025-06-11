@@ -4,11 +4,22 @@ Add Chroma architecture to Forge
 
 ## Installation
 
-0) you may want to force Forge to be in the same version than mine `git checkout d557aef9d889556e5765e5497a6b8187100dbeb5`
-1) inside your forge root directory, apply the patch: `git apply forge.patch` it will modify `backend/loader.py`, `backend/condition.py` and `backend/text_processing/t5_engine.py`
-2) add `huggingface/Chroma` directory inside `backend/huggingface`
-3) add `diffusion_engine/chroma.py` file inside `backend/diffusion_engine`
-4) add `nn/chroma.py` file inside `backend/nn`
+0) the patch process is sensitive to line ending, so start with `git config --global core.autocrlf false`
+1) clone `git clone git@github.com:lllyasviel/stable-diffusion-webui-forge.git`
+2) go inside `cd stable-diffusion-webui-forge`
+3) you may want to force Forge to be in the same version than mine `git checkout ae278f794069a69b79513e16207efc7f1ffdf406`
+4) inside your forge root directory, apply the patch: `git apply forge.patch` it will modify `backend/loader.py`, `backend/condition.py` and `backend/text_processing/t5_engine.py`
+5) add `huggingface/Chroma` directory inside `backend/huggingface`
+6) add `diffusion_engine/chroma.py` file inside `backend/diffusion_engine`
+7) add `nn/chroma.py` file inside `backend/nn`
+
+## Optional: sigmoid scheduler
+
+The sigmoid scheduler is a a quite powerful alternative to the one already available in Forge.
+
+to add it, simply do `git apply sigmoidScheduler.patch`
+
+I keep it as a separated item because it is not the main goal of this repo
 
 ## Architecture
 
@@ -23,6 +34,8 @@ instead there is an independent multilayered network called `distilled_guidance_
 another change is on the text encoder, Flux is relying on both CLIP_L and T5, but Chroma only need T5.
 
 last change, the original Flux model is padding the result of the T5 Tokenizer to force it to at least 256 token. Chroma is trained without the padding.
+
+the model is trained with `T5 XXL Flan` as encoder, while the classic `T5 XXL` work fine, the `Flan` version give better result.
 
 ## Result
 

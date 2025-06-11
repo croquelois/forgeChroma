@@ -1,0 +1,74 @@
+diff --git a/modules/sd_samplers_kdiffusion.py b/modules/sd_samplers_kdiffusion.py
+index 0e4072e..1fe278c 100644
+--- a/modules/sd_samplers_kdiffusion.py
++++ b/modules/sd_samplers_kdiffusion.py
+@@ -126,6 +126,10 @@ class KDiffusionSampler(sd_samplers_common.Sampler):
+                 p.extra_generation_params["Beta schedule alpha"] = opts.beta_dist_alpha
+                 p.extra_generation_params["Beta schedule beta"] = opts.beta_dist_beta
+ 
++            if scheduler.label == 'Sigmoid Offset':
++                p.extra_generation_params["Sigmoid Offset schedule base c"] = opts.sigmoid_base_c
++                p.extra_generation_params["Sigmoid Offset schedule square k"] = opts.sigmoid_square_k
++
+             sigmas = scheduler.function(n=steps, **sigmas_kwargs, device=devices.cpu)
+ 
+         if discard_next_to_last_sigma:
+diff --git a/modules/sd_schedulers.py b/modules/sd_schedulers.py
+index fb22f0c..a73ba35 100644
+--- a/modules/sd_schedulers.py
++++ b/modules/sd_schedulers.py
+@@ -207,6 +207,33 @@ def ays_32_sigmas(n, sigma_min, sigma_max, device='cpu'):
+         sigmas.append(0.0)
+     return torch.FloatTensor(sigmas).to(device)
+ 
++def sigmoid_offset_sigmas(n, sigma_min, sigma_max, inner_model, device):
++    square_k = shared.opts.sigmoid_square_k
++    base_c = shared.opts.sigmoid_base_c
++    print(f"using sigmoid_offset_sigmas with k^2={square_k} c={base_c}")
++    total_timesteps = len(inner_model.sigmas)-1
++    ts = np.linspace(0, 1, n, endpoint=False)
++    shift = 2.0 * (base_c - 0.5)
++    def sigmoid(x):
++        x = (8.0 * x - 4.0) + (shift * 4.0)
++        if square_k * x > 700:
++            return 1.0
++        if square_k * x < -700:
++            return 0.0
++        return 1.0 / (1.0 + np.exp(-square_k * x))
++    transformed_ts = 1.0 - np.array([sigmoid(t) for t in ts])
++    mapped_ts = np.rint(transformed_ts * total_timesteps).astype(int)
++    sigs = []
++    last_t = -1
++    for t in mapped_ts:
++        if t != last_t:
++            if isinstance(inner_model.sigmas, torch.Tensor):
++                sigs.append(float(inner_model.sigmas[t].item()))
++            else:
++                sigs.append(float(inner_model.sigmas[t]))
++        last_t = t
++    sigs.append(0.0)
++    return torch.FloatTensor(sigs).to(device)
+ 
+ schedulers = [
+     Scheduler('automatic', 'Automatic', None),
+@@ -225,6 +252,7 @@ schedulers = [
+     Scheduler('align_your_steps_GITS', 'Align Your Steps GITS', get_align_your_steps_sigmas_GITS),
+     Scheduler('align_your_steps_11', 'Align Your Steps 11', ays_11_sigmas),
+     Scheduler('align_your_steps_32', 'Align Your Steps 32', ays_32_sigmas),
++    Scheduler('sigmoid_offset', 'Sigmoid Offset', sigmoid_offset_sigmas, need_inner_model=True),
+ ]
+ 
+ schedulers_map = {**{x.name: x for x in schedulers}, **{x.label: x for x in schedulers}}
+diff --git a/modules/shared_options.py b/modules/shared_options.py
+index 5174112..66fdd7b 100644
+--- a/modules/shared_options.py
++++ b/modules/shared_options.py
+@@ -416,6 +416,8 @@ options_templates.update(options_section(('sampler-params', "Sampler parameters"
+     'skip_early_cond': OptionInfo(0.0, "Ignore negative prompt during early sampling", gr.Slider, {"minimum": 0.0, "maximum": 1.0, "step": 0.01}, infotext="Skip Early CFG").info("disables CFG on a proportion of steps at the beginning of generation; 0=skip none; 1=skip all; can both improve sample diversity/quality and speed up sampling"),
+     'beta_dist_alpha': OptionInfo(0.6, "Beta scheduler - alpha", gr.Slider, {"minimum": 0.01, "maximum": 1.0, "step": 0.01}, infotext='Beta scheduler alpha').info('Default = 0.6; the alpha parameter of the beta distribution used in Beta sampling'),
+     'beta_dist_beta': OptionInfo(0.6, "Beta scheduler - beta", gr.Slider, {"minimum": 0.01, "maximum": 1.0, "step": 0.01}, infotext='Beta scheduler beta').info('Default = 0.6; the beta parameter of the beta distribution used in Beta sampling'),
++    'sigmoid_base_c': OptionInfo(0.5, "Sigmoid offset scheduler - base c", gr.Slider, {"minimum": -50.0, "maximum": 50.0, "step": 0.01}, infotext='Sigmoid offset scheduler - base c').info('Default = 0.5; the base c parameter of the Sigmoid offset scheduler sampling'),
++    'sigmoid_square_k': OptionInfo(1.0, "Sigmoid offset scheduler - square k", gr.Slider, {"minimum": 0.01, "maximum": 10.0, "step": 0.01}, infotext='Sigmoid offset scheduler - square k').info('Default = 1.0; the square k parameter of the Sigmoid offset scheduler sampling'),
+ }))
+ 
+ options_templates.update(options_section(('postprocessing', "Postprocessing", "postprocessing"), {
