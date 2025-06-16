@@ -1,0 +1,49 @@
+diff --git a/backend/sampling/sampling_function.py b/backend/sampling/sampling_function.py
+index b7ed662..36b517f 100644
+--- a/backend/sampling/sampling_function.py
++++ b/backend/sampling/sampling_function.py
+@@ -151,7 +151,7 @@ def compute_cond_indices(cond_or_uncond, sigmas):
+     return cond_indices, uncond_indices
+ 
+ 
+-def calc_cond_uncond_batch(model, cond, uncond, x_in, timestep, model_options):
++def calc_cond_uncond_batch(model, cond, uncond, x_in, timestep, model_options, step_pct):
+     out_cond = torch.zeros_like(x_in)
+     out_count = torch.ones_like(x_in) * 1e-37
+ 
+@@ -256,6 +256,7 @@ def calc_cond_uncond_batch(model, cond, uncond, x_in, timestep, model_options):
+         transformer_options["cond_mark"] = compute_cond_mark(cond_or_uncond=cond_or_uncond, sigmas=timestep)
+         transformer_options["cond_indices"], transformer_options["uncond_indices"] = compute_cond_indices(cond_or_uncond=cond_or_uncond, sigmas=timestep)
+ 
++        transformer_options['step_pct'] = step_pct;
+         c['transformer_options'] = transformer_options
+ 
+         if control is not None:
+@@ -289,7 +290,7 @@ def calc_cond_uncond_batch(model, cond, uncond, x_in, timestep, model_options):
+     return out_cond, out_uncond
+ 
+ 
+-def sampling_function_inner(model, x, timestep, uncond, cond, cond_scale, model_options={}, seed=None, return_full=False):
++def sampling_function_inner(model, x, timestep, uncond, cond, cond_scale, model_options={}, seed=None, return_full=False, step_pct=0.0):
+     edit_strength = sum((item['strength'] if 'strength' in item else 1) for item in cond)
+ 
+     if math.isclose(cond_scale, 1.0) and model_options.get("disable_cfg1_optimization", False) == False:
+@@ -300,7 +301,7 @@ def sampling_function_inner(model, x, timestep, uncond, cond, cond_scale, model_
+     for fn in model_options.get("sampler_pre_cfg_function", []):
+         model, cond, uncond_, x, timestep, model_options = fn(model, cond, uncond_, x, timestep, model_options)
+ 
+-    cond_pred, uncond_pred = calc_cond_uncond_batch(model, cond, uncond_, x, timestep, model_options)
++    cond_pred, uncond_pred = calc_cond_uncond_batch(model, cond, uncond_, x, timestep, model_options, step_pct)
+ 
+     if "sampler_cfg_function" in model_options:
+         args = {"cond": x - cond_pred, "uncond": x - uncond_pred, "cond_scale": cond_scale, "timestep": timestep, "input": x, "sigma": timestep,
+@@ -359,7 +360,8 @@ def sampling_function(self, denoiser_params, cond_scale, cond_composition):
+     for modifier in model_options.get('conditioning_modifiers', []):
+         model, x, timestep, uncond, cond, cond_scale, model_options, seed = modifier(model, x, timestep, uncond, cond, cond_scale, model_options, seed)
+ 
+-    denoised, cond_pred, uncond_pred = sampling_function_inner(model, x, timestep, uncond, cond, cond_scale, model_options, seed, return_full=True)
++    step_pct = self.step / (self.total_steps-1)
++    denoised, cond_pred, uncond_pred = sampling_function_inner(model, x, timestep, uncond, cond, cond_scale, model_options, seed, step_pct=step_pct, return_full=True)
+     return denoised, cond_pred, uncond_pred
+ 
+ 
