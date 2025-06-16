@@ -21,6 +21,16 @@ to add it, simply do `git apply sigmoidScheduler.patch`
 
 I keep it as a separated item because it is not the main goal of this repo
 
+## Optional: Mag/Tea cache
+
+Chroma is slow, it is twice slower than Flux. But caching can help. Both Mag Cache and Tea Cache are implemented.
+
+I observe more than 50% speed improvement without much loss of quality
+
+to add it, use what is in the `cache` directory. no installation step, so use it only if you know what you do.
+
+I keep it as a separated item because it is not the main goal of this repo
+
 ## Architecture
 
 Chroma is quite similar to Flux-Schnell, but the guidance part has been removed:
