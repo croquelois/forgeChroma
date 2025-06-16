@@ -31,6 +31,17 @@ to add it, use what is in the `cache` directory. no installation step, so use it
 
 I keep it as a separated item because it is not the main goal of this repo
 
+![image](https://github.com/user-attachments/assets/51157cdb-3545-412e-8976-4fbd658fe828)
+
+prompt: `An image of a squirrel in Picasso style`
+
+the performance and parameters are in the title above the pictures (all 30 step of euler simple):
+
+- original: 67s
+- magcache(0.25): 36s
+- teacache(0.25): 46s
+- teacache(0.40): 28s
+
 ## Architecture
 
 Chroma is quite similar to Flux-Schnell, but the guidance part has been removed:
