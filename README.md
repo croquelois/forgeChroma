@@ -1,46 +1,6 @@
 # forgeChroma
 
-Add Chroma architecture to Forge
-
-## Installation
-
-0) the patch process is sensitive to line ending, so start with `git config --global core.autocrlf false`
-1) clone `git clone git@github.com:lllyasviel/stable-diffusion-webui-forge.git`
-2) go inside `cd stable-diffusion-webui-forge`
-3) you may want to force Forge to be in the same version than mine `git checkout ae278f794069a69b79513e16207efc7f1ffdf406`
-4) inside your forge root directory, apply the patch: `git apply forge.patch` it will modify `backend/loader.py`, `backend/condition.py` and `backend/text_processing/t5_engine.py`
-5) add `huggingface/Chroma` directory inside `backend/huggingface`
-6) add `diffusion_engine/chroma.py` file inside `backend/diffusion_engine`
-7) add `nn/chroma.py` file inside `backend/nn`
-
-## Optional: sigmoid scheduler
-
-The sigmoid scheduler is a a quite powerful alternative to the one already available in Forge.
-
-to add it, simply do `git apply sigmoidScheduler.patch`
-
-I keep it as a separated item because it is not the main goal of this repo
-
-## Optional: Mag/Tea cache
-
-Chroma is slow, it is twice slower than Flux. But caching can help. Both Mag Cache and Tea Cache are implemented.
-
-I observe more than 50% speed improvement without much loss of quality
-
-to add it, use what is in the `cache` directory. no installation step, so use it only if you know what you do.
-
-I keep it as a separated item because it is not the main goal of this repo
-
-![image](https://github.com/user-attachments/assets/51157cdb-3545-412e-8976-4fbd658fe828)
-
-prompt: `An image of a squirrel in Picasso style`
-
-the performance and parameters are in the title above the pictures (all 30 step of euler simple):
-
-- original: 67s
-- magcache(0.25): 36s
-- teacache(0.25): 46s
-- teacache(0.40): 28s
+Forge now support Chroma, so this repository will now only contains optional "good to have" patches
 
 ## Architecture
 
@@ -70,3 +30,37 @@ the model is trained with `T5 XXL Flan` as encoder, while the classic `T5 XXL` w
 - text: `t5xxl_fp8_e4m3fn.safetensors`
 
 ![sailor](sailor.png)
+
+## FP8 Scaled support
+
+FP8 scaled safetensors are not yet supported by Forge
+
+to add it: `git apply fp8.patch`
+
+you may need to do `git config apply.whitespace nowarn` to avoid `git apply` complaining about mixed Windows/Linux end of lines.
+
+## sigmoid scheduler
+
+The sigmoid scheduler is a a quite powerful alternative to the one already available in Forge.
+
+to add it: `git apply sigmoidScheduler.patch`
+
+## Mag/Tea cache
+
+Chroma is slow, it is twice slower than Flux. But caching can help. Both Mag Cache and Tea Cache are implemented.
+
+I observe more than 50% speed improvement without much loss of quality
+
+to add it, use what is in the `cache` directory.
+
+![image](https://github.com/user-attachments/assets/51157cdb-3545-412e-8976-4fbd658fe828)
+
+prompt: `An image of a squirrel in Picasso style`
+
+the performance and parameters are in the title above the pictures (all 30 step of euler simple):
+
+- original: 67s
+- magcache(0.25): 36s
+- teacache(0.25): 46s
+- teacache(0.40): 28s
+
